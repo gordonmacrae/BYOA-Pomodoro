@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <!-- Add Inter font for clean typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a1a1a;
+            --background: #f6f6f6;
+            --break-background: #e8f4e5;
+            --accent: #2d81ff;
+            --grey: #666666;
+            --light-grey: #e5e5e5;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--background);
+            color: var(--primary);
+            line-height: 1.6;
+            padding: 20px;
+            transition: background-color 0.5s ease;
+            position: relative;
+        }
+
+        body.break-mode {
+            background-color: var(--break-background);
+        }
+
+        .timer {
+            font-size: 96px;
+            font-weight: 300;
+            margin: 40px 0;
+            letter-spacing: -2px;
+        }
+
+        .settings {
+            margin: 20px 0 30px 0;
+            display: flex;
+            gap: 24px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .settings label {
+            font-size: 14px;
+            color: var(--grey);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .settings input {
+            font-family: 'Inter', sans-serif;
+            background: transparent;
+            border: 1px solid var(--light-grey);
+            padding: 12px;
+            width: 80px;
+            font-size: 16px;
+            border-radius: 4px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .settings input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(45, 129, 255, 0.1);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .controls button {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            padding: 12px 24px;
+            cursor: pointer;
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .controls button:first-child {
+            background: var(--primary);
+            color: white;
+        }
+
+        .controls button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .controls button:active {
+            transform: translateY(0);
+        }
+
+        .status {
+            margin-top: 24px;
+            font-size: 14px;
+            color: var(--grey);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Remove default number input spinners */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        .toggle-button {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            padding: 12px 24px;
+            margin: 12px 0;
+            cursor: pointer;
+            background: var(--light-grey);
+            border: none;
+            color: var(--primary);
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .toggle-button:hover {
+            background: var(--grey);
+            color: white;
+        }
+
+        .pina-colada {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 100px;
+            height: 100px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        body.break-mode .pina-colada {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <img src="https://api.iconify.design/noto:tropical-drink.svg" class="pina-colada" alt="Pina Colada">
+    <div class="timer" id="timer">25:00</div>
+    <button class="toggle-button" onclick="toggleMode()">Switch to Break Time</button>
+    <div class="settings">
+        <div class="input-group">
+            <label>Work Minutes</label>
+            <input type="number" id="workTime" value="25" min="1" max="60">
+        </div>
+        <div class="input-group">
+            <label>Break Minutes</label>
+            <input type="number" id="breakTime" value="5" min="1" max="30">
+        </div>
+    </div>
+    <div class="controls">
+        <button onclick="startTimer()">Start</button>
+        <button onclick="pauseTimer()">Pause</button>
+        <button onclick="resetTimer()">Reset</button>
+    </div>
+    <div class="status" id="status">Work Time</div>
+
+    <script>
+        let timeLeft = 25 * 60;
+        let timerId = null;
+        let isWorkTime = true;
+
+        // Add event listeners for input changes
+        document.getElementById('workTime').addEventListener('change', function() {
+            if (isWorkTime && timerId === null) {
+                timeLeft = getWorkTime();
+                updateDisplay();
+            }
+        });
+
+        document.getElementById('breakTime').addEventListener('change', function() {
+            if (!isWorkTime && timerId === null) {
+                timeLeft = getBreakTime();
+                updateDisplay();
+            }
+        });
+
+        function getWorkTime() {
+            return Math.max(1, Math.min(60, parseInt(document.getElementById('workTime').value) || 25)) * 60;
+        }
+
+        function getBreakTime() {
+            return Math.max(1, Math.min(30, parseInt(document.getElementById('breakTime').value) || 5)) * 60;
+        }
+
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            if (timerId === null) {
+                timerId = setInterval(() => {
+                    timeLeft--;
+                    updateDisplay();
+                    
+                    if (timeLeft === 0) {
+                        clearInterval(timerId);
+                        timerId = null;
+                        
+                        isWorkTime = !isWorkTime;
+                        timeLeft = isWorkTime ? getWorkTime() : getBreakTime();
+                        document.getElementById('status').textContent = 
+                            isWorkTime ? 'Work Time' : 'Break Time';
+                        
+                        document.body.classList.toggle('break-mode', !isWorkTime);
+                        
+                        alert('Time is up!');
+                        updateDisplay();
+                    }
+                }, 1000);
+            }
+        }
+
+        function pauseTimer() {
+            clearInterval(timerId);
+            timerId = null;
+        }
+
+        function resetTimer() {
+            clearInterval(timerId);
+            timerId = null;
+            isWorkTime = true;
+            timeLeft = getWorkTime();
+            document.getElementById('status').textContent = 'Work Time';
+            document.body.classList.remove('break-mode');
+            updateDisplay();
+        }
+
+        function toggleMode() {
+            if (timerId !== null) {
+                alert('Please pause the timer before switching modes');
+                return;
+            }
+            
+            isWorkTime = !isWorkTime;
+            timeLeft = isWorkTime ? getWorkTime() : getBreakTime();
+            document.getElementById('status').textContent = isWorkTime ? 'Work Time' : 'Break Time';
+            document.querySelector('.toggle-button').textContent = 
+                isWorkTime ? 'Switch to Break Time' : 'Switch to Work Time';
+            
+            document.body.classList.toggle('break-mode', !isWorkTime);
+            
+            updateDisplay();
+        }
+
+        // Initialize with default values
+        resetTimer();
+    </script>
+</body>
+</html> 
