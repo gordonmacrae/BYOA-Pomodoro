@@ -43,6 +43,29 @@
             letter-spacing: -2px;
         }
 
+        .timer-container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .mode-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 32px;
+            height: 32px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .mode-icon:hover {
+            opacity: 1;
+        }
+
         .focus-task {
             font-size: 18px;
             color: var(--grey);
@@ -190,12 +213,109 @@
         body.break-mode .pina-colada {
             opacity: 1;
         }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.visible {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--background);
+            padding: 32px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal-content h2 {
+            margin: 0 0 24px 0;
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        .modal-content input {
+            font-family: 'Inter', sans-serif;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--light-grey);
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 24px;
+            box-sizing: border-box;
+        }
+
+        .modal-content input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(45, 129, 255, 0.1);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .modal-buttons button {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            padding: 12px 24px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .modal-buttons button:first-child {
+            background: var(--accent);
+            border: 1px solid var(--accent);
+            color: white;
+        }
+
+        .modal-buttons button:last-child {
+            background: transparent;
+            border: 1px solid var(--light-grey);
+            color: var(--grey);
+        }
+
+        .modal-buttons button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
     <img src="https://api.iconify.design/noto:tropical-drink.svg" class="pina-colada" alt="Pina Colada">
+    <div class="modal" id="focusModal">
+        <div class="modal-content">
+            <h2>What are you focusing on?</h2>
+            <input type="text" id="focusInput" placeholder="Enter your focus task...">
+            <div class="modal-buttons">
+                <button onclick="submitFocus()">Start Focusing</button>
+                <button onclick="cancelFocus()">Cancel</button>
+            </div>
+        </div>
+    </div>
     <div class="focus-task" id="focusTask"></div>
-    <div class="timer" id="timer">25:00</div>
+    <div class="timer-container">
+        <img src="https://api.iconify.design/noto:person-in-suit-levitating.svg" class="mode-icon" id="workIcon" alt="Work Mode" style="display: block;">
+        <img src="https://api.iconify.design/noto:sleeping-face.svg" class="mode-icon" id="breakIcon" alt="Break Mode" style="display: none;">
+        <div class="timer" id="timer">25:00</div>
+    </div>
     <button class="toggle-button" onclick="toggleMode()">Switch to Break Time</button>
     <div class="settings">
         <div class="input-group">
@@ -219,6 +339,7 @@
         let timerId = null;
         let isWorkTime = true;
         let currentFocus = '';
+        let pendingFocus = false;
 
         // Add event listeners for input changes
         document.getElementById('workTime').addEventListener('change', function() {
@@ -250,14 +371,51 @@
                 `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
 
+        function showFocusModal() {
+            document.getElementById('focusModal').classList.add('visible');
+            document.getElementById('focusInput').focus();
+            pendingFocus = true;
+        }
+
+        function submitFocus() {
+            const input = document.getElementById('focusInput');
+            if (input.value.trim()) {
+                currentFocus = input.value.trim();
+                document.getElementById('focusTask').textContent = `Focus: ${currentFocus}`;
+                document.getElementById('focusTask').classList.add('visible');
+                document.getElementById('focusModal').classList.remove('visible');
+                input.value = '';
+                pendingFocus = false;
+                startTimer();
+            }
+        }
+
+        function cancelFocus() {
+            document.getElementById('focusModal').classList.remove('visible');
+            document.getElementById('focusInput').value = '';
+            pendingFocus = false;
+        }
+
+        function updateModeIcons() {
+            const workIcon = document.getElementById('workIcon');
+            const breakIcon = document.getElementById('breakIcon');
+            console.log('Updating icons. Work mode:', isWorkTime);
+            if (isWorkTime) {
+                workIcon.style.display = 'block';
+                breakIcon.style.display = 'none';
+                console.log('Work icon should be visible');
+            } else {
+                workIcon.style.display = 'none';
+                breakIcon.style.display = 'block';
+                console.log('Break icon should be visible');
+            }
+        }
+
         function startTimer() {
             if (timerId === null) {
-                if (!currentFocus) {
-                    currentFocus = prompt('What are you focusing on?');
-                    if (currentFocus) {
-                        document.getElementById('focusTask').textContent = `Focus: ${currentFocus}`;
-                        document.getElementById('focusTask').classList.add('visible');
-                    }
+                if (!currentFocus && !pendingFocus) {
+                    showFocusModal();
+                    return;
                 }
                 
                 timerId = setInterval(() => {
@@ -274,6 +432,7 @@
                             isWorkTime ? 'Work Time' : 'Break Time';
                         
                         document.body.classList.toggle('break-mode', !isWorkTime);
+                        updateModeIcons();
                         
                         alert('Time is up!');
                         updateDisplay();
@@ -297,6 +456,10 @@
             currentFocus = '';
             document.getElementById('focusTask').textContent = '';
             document.getElementById('focusTask').classList.remove('visible');
+            document.getElementById('focusModal').classList.remove('visible');
+            document.getElementById('focusInput').value = '';
+            pendingFocus = false;
+            updateModeIcons();
             updateDisplay();
         }
 
@@ -313,12 +476,21 @@
                 isWorkTime ? 'Switch to Break Time' : 'Switch to Work Time';
             
             document.body.classList.toggle('break-mode', !isWorkTime);
+            updateModeIcons();
             
             updateDisplay();
         }
 
+        // Add event listener for Enter key in focus input
+        document.getElementById('focusInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitFocus();
+            }
+        });
+
         // Initialize with default values
         resetTimer();
+        updateModeIcons(); // Make sure icons are set correctly on initial load
     </script>
 </body>
 </html> 
