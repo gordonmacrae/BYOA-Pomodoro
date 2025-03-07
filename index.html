@@ -43,6 +43,19 @@
             letter-spacing: -2px;
         }
 
+        .focus-task {
+            font-size: 18px;
+            color: var(--grey);
+            margin-bottom: 20px;
+            text-align: center;
+            max-width: 400px;
+            display: none;
+        }
+
+        .focus-task.visible {
+            display: block;
+        }
+
         .settings {
             margin: 20px 0 30px 0;
             display: flex;
@@ -90,17 +103,30 @@
             font-size: 14px;
             padding: 12px 24px;
             cursor: pointer;
-            background: transparent;
+            background: var(--primary);
             border: 1px solid var(--primary);
-            color: var(--primary);
+            color: white;
             border-radius: 4px;
             transition: all 0.2s ease;
             font-weight: 500;
         }
 
-        .controls button:first-child {
-            background: var(--primary);
+        .controls button:not(:first-child) {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+
+        body.break-mode .controls button {
+            background: var(--accent);
+            border: 1px solid var(--accent);
             color: white;
+        }
+
+        body.break-mode .controls button:not(:first-child) {
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
         }
 
         .controls button:hover {
@@ -168,6 +194,7 @@
 </head>
 <body>
     <img src="https://api.iconify.design/noto:tropical-drink.svg" class="pina-colada" alt="Pina Colada">
+    <div class="focus-task" id="focusTask"></div>
     <div class="timer" id="timer">25:00</div>
     <button class="toggle-button" onclick="toggleMode()">Switch to Break Time</button>
     <div class="settings">
@@ -191,6 +218,7 @@
         let timeLeft = 25 * 60;
         let timerId = null;
         let isWorkTime = true;
+        let currentFocus = '';
 
         // Add event listeners for input changes
         document.getElementById('workTime').addEventListener('change', function() {
@@ -224,6 +252,14 @@
 
         function startTimer() {
             if (timerId === null) {
+                if (!currentFocus) {
+                    currentFocus = prompt('What are you focusing on?');
+                    if (currentFocus) {
+                        document.getElementById('focusTask').textContent = `Focus: ${currentFocus}`;
+                        document.getElementById('focusTask').classList.add('visible');
+                    }
+                }
+                
                 timerId = setInterval(() => {
                     timeLeft--;
                     updateDisplay();
@@ -258,6 +294,9 @@
             timeLeft = getWorkTime();
             document.getElementById('status').textContent = 'Work Time';
             document.body.classList.remove('break-mode');
+            currentFocus = '';
+            document.getElementById('focusTask').textContent = '';
+            document.getElementById('focusTask').classList.remove('visible');
             updateDisplay();
         }
 
